@@ -1,7 +1,7 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { FormEvent, useState } from "react";
+import { FormEvent, useEffect, useState } from "react";
 
 export type BookCardRow = {
   id: number;
@@ -17,11 +17,31 @@ export default function BookCard({ book }: { book: BookCardRow }) {
   const [isEditing, setIsEditing] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [members, setMembers] = useState<Array<{ id: number; name: string }>>([]);
+  const [selectedMemberId, setSelectedMemberId] = useState("");
   const [draft, setDraft] = useState({
     title: book.title,
     author: book.author_name,
     year: book.year?.toString() ?? "",
   });
+
+  useEffect(() => {
+    async function loadMembers() {
+      const response = await fetch("/api/members");
+
+      if (!response.ok) {
+        return;
+      }
+
+      const data = (await response.json()) as Array<{ id: number; name: string }>;
+      setMembers(data);
+      if (data.length > 0) {
+        setSelectedMemberId(String(data[0].id));
+      }
+    }
+
+    loadMembers();
+  }, []);
 
   const statusText = book.member_name
     ? `On loan to ${book.member_name}, due ${formatDate(book.due_on)}`
@@ -117,6 +137,58 @@ export default function BookCard({ book }: { book: BookCardRow }) {
     router.refresh();
   }
 
+  async function handleLend() {
+    if (!selectedMemberId) {
+      setError("Select a member before lending the book.");
+      setSuccess("");
+      return;
+    }
+
+    const response = await fetch(`/api/books/${book.id}/lend`, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ memberId: Number(selectedMemberId) }),
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+    };
+
+    if (!response.ok) {
+      setError(payload.error ?? "Unable to lend this book.");
+      setSuccess("");
+      return;
+    }
+
+    setError("");
+    setSuccess(payload.message ?? "Book lent successfully.");
+    router.refresh();
+  }
+
+  async function handleReturn() {
+    const response = await fetch(`/api/books/${book.id}/return`, {
+      method: "POST",
+    });
+
+    const payload = (await response.json().catch(() => ({}))) as {
+      error?: string;
+      message?: string;
+    };
+
+    if (!response.ok) {
+      setError(payload.error ?? "Unable to record the return.");
+      setSuccess("");
+      return;
+    }
+
+    setError("");
+    setSuccess(payload.message ?? "Book returned successfully.");
+    router.refresh();
+  }
+
   return (
     <li className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_38px_rgba(15,23,42,0.08)]">
       <div className="flex items-start justify-between gap-3">
@@ -168,6 +240,48 @@ export default function BookCard({ book }: { book: BookCardRow }) {
         <p className="mt-3 rounded-xl border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700">
           {success}
         </p>
+      )}
+
+      {!book.member_name ? (
+        <div className="mt-4 rounded-2xl border border-slate-200 bg-slate-50 p-3">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+            <select
+              value={selectedMemberId}
+              onChange={(event) => setSelectedMemberId(event.target.value)}
+              className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+            >
+              <option value="">Select a member</option>
+              {members.map((member) => (
+                <option key={member.id} value={member.id}>
+                  {member.name}
+                </option>
+              ))}
+            </select>
+
+            <button
+              type="button"
+              onClick={handleLend}
+              disabled={!selectedMemberId}
+              className="rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:cursor-not-allowed disabled:bg-slate-300"
+            >
+              Lend book
+            </button>
+          </div>
+        </div>
+      ) : (
+        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 sm:flex-row sm:items-center sm:justify-between">
+          <span className="text-sm font-medium text-amber-800">
+            Due back {formatDate(book.due_on)}
+          </span>
+
+          <button
+            type="button"
+            onClick={handleReturn}
+            className="rounded-xl bg-slate-900 px-4 py-2.5 text-sm font-semibold text-white transition hover:bg-slate-700"
+          >
+            Record return
+          </button>
+        </div>
       )}
 
       {isEditing && (
