@@ -1,4 +1,5 @@
 import { Suspense } from "react";
+import AddBookForm from "../components/AddBookForm";
 import { listBooks } from "../db/queries";
 
 function formatDate(value: string | Date | null) {
@@ -82,14 +83,14 @@ export default function Page() {
             Church Library
           </p>
 
-          <h1 className="mt-2 text-2xl font-bold">
-            Library Manager
-          </h1>
+          <h1 className="mt-2 text-2xl font-bold">Library Manager</h1>
 
           <p className="mt-2 text-sm text-slate-300">
             Browse books and see which ones are available or on loan.
           </p>
         </header>
+
+        <AddBookForm />
 
         <Suspense
           fallback={
