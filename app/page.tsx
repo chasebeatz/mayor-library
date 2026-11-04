@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { Suspense } from "react";
 import AddBookForm from "../components/AddBookForm";
 import BookCard from "../components/BookCard";
@@ -32,7 +33,7 @@ export default function Page() {
       <div className="mx-auto max-w-4xl">
         <header className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.18)]">
           <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 px-6 py-6 sm:px-8">
-            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-end sm:justify-between">
               <div>
                 <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">
                   Church Library
@@ -42,9 +43,20 @@ export default function Page() {
                 </h1>
               </div>
 
-              <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-100">
-                Shelf overview
-              </div>
+              <nav className="flex items-center gap-2 rounded-full border border-white/10 bg-white/5 p-1.5 backdrop-blur-sm">
+                <Link
+                  href="/"
+                  className="rounded-full bg-white px-3.5 py-1.5 text-sm font-semibold text-slate-900"
+                >
+                  Books
+                </Link>
+                <Link
+                  href="/members"
+                  className="rounded-full px-3.5 py-1.5 text-sm font-medium text-slate-200 transition hover:bg-white/10 hover:text-white"
+                >
+                  Members
+                </Link>
+              </nav>
             </div>
 
             <p className="mt-4 max-w-2xl text-sm text-slate-300 sm:text-base">

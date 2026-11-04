@@ -9,6 +9,13 @@ export type BookListRow = {
   due_on: string | null;
 };
 
+export type MemberListRow = {
+  id: number;
+  name: string;
+  phone: string | null;
+  active_loans: number;
+};
+
 export async function listBooks(): Promise<BookListRow[]> {
   const rows = await sql<BookListRow[]>`
     select
@@ -25,6 +32,28 @@ export async function listBooks(): Promise<BookListRow[]> {
      and l.returned_on is null
     left join members m on m.id = l.member_id
     order by b.title asc
+  `;
+
+  return rows;
+}
+
+export async function listMembers(): Promise<MemberListRow[]> {
+  const rows = await sql<MemberListRow[]>`
+    select
+      m.id,
+      m.name,
+      m.phone,
+      coalesce(
+        (
+          select count(*)::int
+          from loans l
+          where l.member_id = m.id
+            and l.returned_on is null
+        ),
+        0
+      ) as active_loans
+    from members m
+    order by m.name asc
   `;
 
   return rows;
