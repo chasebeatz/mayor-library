@@ -1,106 +1,80 @@
 import { Suspense } from "react";
 import AddBookForm from "../components/AddBookForm";
+import BookCard from "../components/BookCard";
 import { listBooks } from "../db/queries";
-
-function formatDate(value: string | Date | null) {
-  if (!value) return "—";
-
-  const date = value instanceof Date ? value : new Date(value);
-
-  if (Number.isNaN(date.getTime())) {
-    return "Date unavailable";
-  }
-
-  return new Intl.DateTimeFormat("en-GB", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-    timeZone: "UTC",
-  }).format(date);
-}
 
 async function BooksList() {
   const books = await listBooks();
 
   if (books.length === 0) {
     return (
-      <p className="mt-4 rounded-xl bg-white p-4 text-slate-600">
-        No books have been added yet.
-      </p>
+      <div className="mt-6 rounded-3xl border border-dashed border-slate-300 bg-white/80 px-5 py-10 text-center shadow-sm">
+        <p className="text-lg font-semibold text-slate-800">No books have been added yet.</p>
+        <p className="mt-2 text-sm text-slate-500">
+          Add the first title to start building your church library shelf.
+        </p>
+      </div>
     );
   }
 
   return (
-    <ul className="mt-4 space-y-3">
-      {books.map((book) => {
-        const status = book.member_name
-          ? `On loan to ${book.member_name}, due ${formatDate(book.due_on)}`
-          : "Available";
-
-        return (
-          <li
-            key={book.id}
-            className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
-          >
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <h2 className="text-lg font-semibold text-slate-900">
-                  {book.title}
-                </h2>
-
-                <p className="mt-1 text-sm text-slate-600">
-                  by {book.author_name}
-                </p>
-              </div>
-
-              {book.year !== null && (
-                <span className="rounded-full bg-slate-100 px-2 py-1 text-xs font-medium text-slate-700">
-                  {book.year}
-                </span>
-              )}
-            </div>
-
-            <p
-              className={`mt-3 text-sm font-medium ${
-                book.member_name ? "text-amber-700" : "text-green-700"
-              }`}
-            >
-              {status}
-            </p>
-          </li>
-        );
-      })}
+    <ul className="mt-6 space-y-4">
+      {books.map((book) => (
+        <BookCard key={book.id} book={book} />
+      ))}
     </ul>
   );
 }
 
 export default function Page() {
   return (
-    <main className="min-h-screen bg-slate-100 px-4 py-6 text-slate-900">
-      <div className="mx-auto max-w-2xl">
-        <header className="rounded-3xl bg-slate-900 px-5 py-4 text-white shadow-lg">
-          <p className="text-xs uppercase tracking-widest text-slate-300">
-            Church Library
-          </p>
+    <main className="min-h-screen bg-[radial-gradient(circle_at_top,_#f8fafc_0%,_#eef2ff_28%,_#f8fafc_100%)] px-4 py-6 text-slate-900 sm:px-6 lg:px-8">
+      <div className="mx-auto max-w-4xl">
+        <header className="overflow-hidden rounded-[28px] border border-slate-200 bg-slate-900 shadow-[0_18px_45px_rgba(15,23,42,0.18)]">
+          <div className="bg-gradient-to-r from-slate-900 via-slate-800 to-indigo-900 px-6 py-6 sm:px-8">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-[0.22em] text-slate-300">
+                  Church Library
+                </p>
+                <h1 className="mt-2 text-3xl font-black tracking-tight text-white sm:text-4xl">
+                  Library Manager
+                </h1>
+              </div>
 
-          <h1 className="mt-2 text-2xl font-bold">Library Manager</h1>
+              <div className="rounded-full border border-white/15 bg-white/5 px-3 py-1.5 text-xs font-medium text-slate-100">
+                Shelf overview
+              </div>
+            </div>
 
-          <p className="mt-2 text-sm text-slate-300">
-            Browse books and see which ones are available or on loan.
-          </p>
+            <p className="mt-4 max-w-2xl text-sm text-slate-300 sm:text-base">
+              Track what is available, what is on loan, and keep the library tidy with quick edits and clean deletion controls.
+            </p>
+          </div>
         </header>
 
-        <AddBookForm />
+        <div className="mt-6">
+          <AddBookForm />
+        </div>
 
-        <Suspense
-          fallback={
-            <p className="mt-4 rounded-2xl bg-white p-4 text-sm text-slate-500">
-              Loading books...
-            </p>
-          }
-        >
-          <BooksList />
-        </Suspense>
+        <section className="mt-8">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900">Books</h2>
+            <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm ring-1 ring-slate-200">
+              Catalogue
+            </span>
+          </div>
+
+          <Suspense
+            fallback={
+              <p className="mt-4 rounded-2xl bg-white p-4 text-sm text-slate-500 shadow-sm">
+                Loading books...
+              </p>
+            }
+          >
+            <BooksList />
+          </Suspense>
+        </section>
       </div>
     </main>
   );
