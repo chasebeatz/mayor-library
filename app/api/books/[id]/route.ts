@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "../../../../db/index";
+import { hasColumn } from "../../../../db/queries";
+import { formatCategories } from "../../../../lib/book-categories";
 
 export async function PUT(
   request: Request,
@@ -12,7 +14,7 @@ export async function PUT(
     return NextResponse.json({ error: "Invalid book id." }, { status: 400 });
   }
 
-  let payload: { title?: string; author?: string; year?: string | number };
+  let payload: { title?: string; author?: string; year?: string | number; category?: string | string[] };
 
   try {
     payload = await request.json();
@@ -26,6 +28,7 @@ export async function PUT(
   const title = String(payload.title ?? "").trim();
   const author = String(payload.author ?? "").trim();
   const yearText = String(payload.year ?? "").trim();
+  const category = formatCategories(payload.category ?? "General");
 
   if (!title) {
     return NextResponse.json({ error: "Title is required." }, { status: 400 });
@@ -73,12 +76,21 @@ export async function PUT(
     authorId = inserted[0].id;
   }
 
-  const result = await sql<{ id: number }[]>`
-    update books
-    set title = ${title}, year = ${year}, author_id = ${authorId}
-    where id = ${bookId}
-    returning id
-  `;
+  const hasCategoryColumn = await hasColumn("books", "category");
+
+  const result = hasCategoryColumn
+    ? await sql<{ id: number }[]>`
+        update books
+        set title = ${title}, year = ${year}, category = ${category}, author_id = ${authorId}
+        where id = ${bookId}
+        returning id
+      `
+    : await sql<{ id: number }[]>`
+        update books
+        set title = ${title}, year = ${year}, author_id = ${authorId}
+        where id = ${bookId}
+        returning id
+      `;
 
   if (result.length === 0) {
     return NextResponse.json({ error: "Book not found." }, { status: 404 });

@@ -7,21 +7,21 @@ INSERT INTO authors (name) VALUES
   ('Mary Shelley'),
   ('Ngugi wa Thiong''o');
 
-INSERT INTO books (title, year, author_id)
-SELECT title, year, a.id
+INSERT INTO books (title, year, category, author_id)
+SELECT title, year, category, a.id
 FROM (
   VALUES
-    ('Things Fall Apart', 1958),
-    ('No Longer at Ease', 1960),
-    ('Pride and Prejudice', 1813),
-    ('Emma', 1815),
-    ('1984', 1949),
-    ('Animal Farm', 1945),
-    ('Frankenstein', 1818),
-    ('The Last Man', 1826),
-    ('Petals of Blood', 1977),
-    ('Devil on the Cross', 1980)
-) AS books_data(title, year)
+    ('Things Fall Apart', 1958, 'Literature'),
+    ('No Longer at Ease', 1960, 'Literature'),
+    ('Pride and Prejudice', 1813, 'History'),
+    ('Emma', 1815, 'History'),
+    ('1984', 1949, 'Science'),
+    ('Animal Farm', 1945, 'Languages'),
+    ('Frankenstein', 1818, 'Science'),
+    ('The Last Man', 1826, 'Art'),
+    ('Petals of Blood', 1977, 'History'),
+    ('Devil on the Cross', 1980, 'Languages')
+) AS books_data(title, year, category)
 JOIN authors a
   ON a.name = CASE
     WHEN books_data.title = 'Things Fall Apart' THEN 'Chinua Achebe'

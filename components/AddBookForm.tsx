@@ -1,11 +1,29 @@
 "use client";
 
 import { FormEvent, useState } from "react";
+import { BOOK_CATEGORIES, formatCategories } from "../lib/book-categories";
 
 export default function AddBookForm() {
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedCategories, setSelectedCategories] = useState<string[]>(["General"]);
+
+  function toggleCategory(category: string) {
+    setSelectedCategories((current) => {
+      if (category === "General") {
+        return ["General"];
+      }
+
+      const next = current.filter((item) => item !== "General");
+
+      if (next.includes(category)) {
+        return next.filter((item) => item !== category);
+      }
+
+      return [...next, category];
+    });
+  }
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -15,6 +33,7 @@ export default function AddBookForm() {
     const title = String(formData.get("title") ?? "").trim();
     const author = String(formData.get("author") ?? "").trim();
     const yearText = String(formData.get("year") ?? "").trim();
+    const category = formatCategories(formData.getAll("category"));
 
     if (!title) {
       setError("Title is required.");
@@ -51,7 +70,7 @@ export default function AddBookForm() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ title, author, year }),
+      body: JSON.stringify({ title, author, year, category }),
     });
 
     const payload = (await response.json().catch(() => ({}))) as {
@@ -69,6 +88,7 @@ export default function AddBookForm() {
 
     setSuccess(payload.message ?? "Book added successfully.");
     form.reset();
+    setSelectedCategories(["General"]);
     window.location.reload();
   }
 
@@ -137,6 +157,38 @@ export default function AddBookForm() {
             className="w-full rounded-xl border border-slate-300 bg-slate-50 px-3 py-2 text-sm text-slate-900 outline-none ring-0 focus:border-slate-400"
             placeholder="2024"
           />
+        </div>
+
+        <div>
+          <label className="mb-2 block text-sm font-medium text-slate-700">
+            Categories
+          </label>
+          <div className="flex flex-wrap gap-2 rounded-xl border border-slate-300 bg-slate-50 p-3">
+            {BOOK_CATEGORIES.map((option) => {
+              const isChecked = selectedCategories.includes(option);
+
+              return (
+                <label
+                  key={option}
+                  className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                    isChecked
+                      ? "border-indigo-500 bg-indigo-100 text-indigo-700"
+                      : "border-slate-300 bg-white text-slate-700"
+                  }`}
+                >
+                  <input
+                    type="checkbox"
+                    name="category"
+                    value={option}
+                    checked={isChecked}
+                    onChange={() => toggleCategory(option)}
+                    className="h-3.5 w-3.5 accent-indigo-600"
+                  />
+                  {option}
+                </label>
+              );
+            })}
+          </div>
         </div>
 
         <button

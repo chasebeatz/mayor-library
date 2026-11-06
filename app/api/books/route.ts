@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { sql } from "../../../db/index";
-import { listBooks } from "../../../db/queries";
+import { hasColumn, listBooks } from "../../../db/queries";
+import { formatCategories } from "../../../lib/book-categories";
 
 export async function GET() {
   const books = await listBooks();
@@ -8,7 +9,7 @@ export async function GET() {
 }
 
 export async function POST(request: Request) {
-  let payload: { title?: string; author?: string; year?: string | number };
+  let payload: { title?: string; author?: string; year?: string | number; category?: string | string[] };
 
   try {
     payload = await request.json();
@@ -22,6 +23,7 @@ export async function POST(request: Request) {
   const title = String(payload.title ?? "").trim();
   const author = String(payload.author ?? "").trim();
   const yearText = String(payload.year ?? "").trim();
+  const category = formatCategories(payload.category ?? "General");
 
   if (!title) {
     return NextResponse.json({ error: "Title is required." }, { status: 400 });
@@ -69,10 +71,19 @@ export async function POST(request: Request) {
     authorId = inserted[0].id;
   }
 
-  await sql`
-    insert into books (title, year, author_id)
-    values (${title}, ${year}, ${authorId})
-  `;
+  const hasCategoryColumn = await hasColumn("books", "category");
+
+  if (hasCategoryColumn) {
+    await sql`
+      insert into books (title, year, category, author_id)
+      values (${title}, ${year}, ${category}, ${authorId})
+    `;
+  } else {
+    await sql`
+      insert into books (title, year, author_id)
+      values (${title}, ${year}, ${authorId})
+    `;
+  }
 
   return NextResponse.json(
     { message: "Book added successfully." },
