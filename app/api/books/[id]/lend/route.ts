@@ -12,7 +12,7 @@ export async function POST(
     return NextResponse.json({ error: "Invalid book id." }, { status: 400 });
   }
 
-  let payload: { memberId?: number | string };
+  let payload: { memberId?: number | string; days?: number | string };
 
   try {
     payload = await request.json();
@@ -24,10 +24,18 @@ export async function POST(
   }
 
   const memberId = Number(payload.memberId ?? "");
+  const days = Number(payload.days ?? 14);
 
   if (!Number.isInteger(memberId) || memberId <= 0) {
     return NextResponse.json(
       { error: "Select a valid member before lending." },
+      { status: 400 }
+    );
+  }
+
+  if (!Number.isInteger(days) || days <= 0 || days > 90) {
+    return NextResponse.json(
+      { error: "Select a valid rental period between 1 and 90 days." },
       { status: 400 }
     );
   }
@@ -70,7 +78,7 @@ export async function POST(
   }
 
   const dueOn = new Date();
-  dueOn.setDate(dueOn.getDate() + 14);
+  dueOn.setDate(dueOn.getDate() + days);
 
   const record = await sql<{ due_on: Date; member_name: string }[]>`
     insert into loans (book_id, member_id, borrowed_on, due_on, returned_on)

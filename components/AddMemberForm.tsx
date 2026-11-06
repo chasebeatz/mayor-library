@@ -14,9 +14,16 @@ export default function AddMemberForm() {
     const formData = new FormData(form);
     const name = String(formData.get("name") ?? "").trim();
     const phone = String(formData.get("phone") ?? "").trim();
+    const dateOfBirth = String(formData.get("date_of_birth") ?? "").trim();
 
     if (!name) {
       setError("Member name is required.");
+      setSuccess("");
+      return;
+    }
+
+    if (dateOfBirth && !/^\d{4}-\d{2}-\d{2}$/.test(dateOfBirth)) {
+      setError("Date of birth must use YYYY-MM-DD format.");
       setSuccess("");
       return;
     }
@@ -30,7 +37,7 @@ export default function AddMemberForm() {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ name, phone }),
+      body: JSON.stringify({ name, phone, date_of_birth: dateOfBirth }),
     });
 
     const payload = (await response.json().catch(() => ({}))) as {
@@ -101,6 +108,18 @@ export default function AddMemberForm() {
             type="tel"
             className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
             placeholder="e.g. 024-100-1010"
+          />
+        </div>
+
+        <div className="md:col-span-2">
+          <label htmlFor="member-dob" className="mb-1.5 block text-sm font-medium text-slate-700">
+            Date of birth
+          </label>
+          <input
+            id="member-dob"
+            name="date_of_birth"
+            type="date"
+            className="w-full rounded-2xl border border-slate-300 bg-slate-50 px-3.5 py-3 text-sm text-slate-900 outline-none transition focus:border-indigo-400 focus:bg-white"
           />
         </div>
 

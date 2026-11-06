@@ -6,13 +6,15 @@ create table books (
 id serial primary key,
 title text not null,
 year integer,
+category text not null default 'General',
 author_id integer not null references authors (id)
 );
 
 create table members (
 id serial primary key,
 name text not null,
-phone text
+phone text,
+date_of_birth date
 );
 create table loans (
 id serial primary key,

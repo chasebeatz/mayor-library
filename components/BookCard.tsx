@@ -2,11 +2,13 @@
 
 import { useRouter } from "next/navigation";
 import { FormEvent, useEffect, useState } from "react";
+import { BOOK_CATEGORIES, formatCategories, parseCategories } from "../lib/book-categories";
 
 export type BookCardRow = {
   id: number;
   title: string;
   year: number | null;
+  category: string;
   author_name: string;
   member_name: string | null;
   due_on: string | null;
@@ -19,10 +21,12 @@ export default function BookCard({ book }: { book: BookCardRow }) {
   const [success, setSuccess] = useState("");
   const [members, setMembers] = useState<Array<{ id: number; name: string }>>([]);
   const [selectedMemberId, setSelectedMemberId] = useState("");
+  const [rentalDays, setRentalDays] = useState("14");
   const [draft, setDraft] = useState({
     title: book.title,
     author: book.author_name,
     year: book.year?.toString() ?? "",
+    categories: parseCategories(book.category),
   });
 
   useEffect(() => {
@@ -43,13 +47,21 @@ export default function BookCard({ book }: { book: BookCardRow }) {
     loadMembers();
   }, []);
 
+  const isOverdue = Boolean(
+    book.member_name &&
+      book.due_on &&
+      new Date(book.due_on).getTime() < Date.now()
+  );
+
   const statusText = book.member_name
     ? `On loan to ${book.member_name}, due ${formatDate(book.due_on)}`
     : "Available";
 
-  const statusClass = book.member_name
-    ? "border-amber-200 bg-amber-50 text-amber-700"
-    : "border-emerald-200 bg-emerald-50 text-emerald-700";
+  const statusClass = !book.member_name
+    ? "border-emerald-200 bg-emerald-50 text-emerald-700"
+    : isOverdue
+      ? "border-rose-200 bg-rose-50 text-rose-700"
+      : "border-amber-200 bg-amber-50 text-amber-700";
 
   async function handleDelete() {
     const confirmed = window.confirm(`Delete “${book.title}”?`);
@@ -84,6 +96,7 @@ export default function BookCard({ book }: { book: BookCardRow }) {
     const title = draft.title.trim();
     const author = draft.author.trim();
     const yearText = draft.year.trim();
+    const category = formatCategories(draft.categories);
 
     if (!title) {
       setError("Title is required.");
@@ -117,7 +130,7 @@ export default function BookCard({ book }: { book: BookCardRow }) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ title, author, year }),
+      body: JSON.stringify({ title, author, year, category }),
     });
 
     const payload = (await response.json().catch(() => ({}))) as {
@@ -149,7 +162,10 @@ export default function BookCard({ book }: { book: BookCardRow }) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ memberId: Number(selectedMemberId) }),
+      body: JSON.stringify({
+        memberId: Number(selectedMemberId),
+        days: Number(rentalDays),
+      }),
     });
 
     const payload = (await response.json().catch(() => ({}))) as {
@@ -189,6 +205,28 @@ export default function BookCard({ book }: { book: BookCardRow }) {
     router.refresh();
   }
 
+  function toggleCategory(category: string) {
+    setDraft((current) => {
+      if (category === "General") {
+        return { ...current, categories: ["General"] };
+      }
+
+      const next = current.categories.filter((item) => item !== "General");
+
+      if (next.includes(category)) {
+        return {
+          ...current,
+          categories: next.filter((item) => item !== category),
+        };
+      }
+
+      return {
+        ...current,
+        categories: [...next, category],
+      };
+    });
+  }
+
   return (
     <li className="rounded-3xl border border-slate-200 bg-white p-4 shadow-[0_10px_30px_rgba(15,23,42,0.06)] transition hover:-translate-y-0.5 hover:border-slate-300 hover:shadow-[0_16px_38px_rgba(15,23,42,0.08)]">
       <div className="flex items-start justify-between gap-3">
@@ -202,6 +240,16 @@ export default function BookCard({ book }: { book: BookCardRow }) {
             )}
           </div>
           <p className="mt-2 text-sm text-slate-600">by {book.author_name}</p>
+          <div className="mt-2 flex flex-wrap gap-2">
+            {parseCategories(book.category).map((category) => (
+              <span
+                key={`${book.id}-${category}`}
+                className="inline-flex rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-semibold uppercase tracking-[0.08em] text-indigo-700"
+              >
+                {category}
+              </span>
+            ))}
+          </div>
         </div>
 
         <div className="flex shrink-0 items-center gap-2">
@@ -258,6 +306,17 @@ export default function BookCard({ book }: { book: BookCardRow }) {
               ))}
             </select>
 
+            <select
+              value={rentalDays}
+              onChange={(event) => setRentalDays(event.target.value)}
+              className="min-w-[120px] rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
+            >
+              <option value="7">7 days</option>
+              <option value="14">14 days</option>
+              <option value="21">21 days</option>
+              <option value="30">30 days</option>
+            </select>
+
             <button
               type="button"
               onClick={handleLend}
@@ -269,8 +328,12 @@ export default function BookCard({ book }: { book: BookCardRow }) {
           </div>
         </div>
       ) : (
-        <div className="mt-4 flex flex-col gap-3 rounded-2xl border border-amber-200 bg-amber-50 p-3 sm:flex-row sm:items-center sm:justify-between">
-          <span className="text-sm font-medium text-amber-800">
+        <div
+          className={`mt-4 flex flex-col gap-3 rounded-2xl p-3 sm:flex-row sm:items-center sm:justify-between ${
+            isOverdue ? "border border-rose-200 bg-rose-50" : "border border-amber-200 bg-amber-50"
+          }`}
+        >
+          <span className={`text-sm font-medium ${isOverdue ? "text-rose-800" : "text-amber-800"}`}>
             Due back {formatDate(book.due_on)}
           </span>
 
@@ -329,6 +392,36 @@ export default function BookCard({ book }: { book: BookCardRow }) {
               }
               className="w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-slate-400"
             />
+          </div>
+
+          <div>
+            <label className="mb-1 block text-xs font-semibold uppercase tracking-[0.08em] text-slate-500">
+              Categories
+            </label>
+            <div className="flex flex-wrap gap-2 rounded-xl border border-slate-300 bg-white p-3">
+              {BOOK_CATEGORIES.map((option) => {
+                const checked = draft.categories.includes(option);
+
+                return (
+                  <label
+                    key={`${book.id}-${option}`}
+                    className={`inline-flex cursor-pointer items-center gap-2 rounded-full border px-2.5 py-1.5 text-xs font-medium transition ${
+                      checked
+                        ? "border-indigo-500 bg-indigo-100 text-indigo-700"
+                        : "border-slate-300 bg-slate-50 text-slate-700"
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      onChange={() => toggleCategory(option)}
+                      className="h-3.5 w-3.5 accent-indigo-600"
+                    />
+                    {option}
+                  </label>
+                );
+              })}
+            </div>
           </div>
 
           <button
