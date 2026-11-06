@@ -26,3 +26,13 @@ returned_on date -- empty (null) while the book is still out
 );-- The database itself refuses a second open loan for the same book.
 create unique index one_open_loan_per_book on loans (book_id) where 
 returned_on is null;
+
+create table book_requests (
+  id serial primary key,
+  title text not null,
+  requested_by text not null,
+  category text not null default 'General',
+  notes text,
+  status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+  created_at timestamp not null default current_timestamp
+);
