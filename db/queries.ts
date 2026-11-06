@@ -41,6 +41,30 @@ export type LoanRecordRow = {
   due_on: string | null;
 };
 
+export type BookRequestRow = {
+  id: number;
+  title: string;
+  requested_by: string;
+  category: string;
+  notes: string | null;
+  status: "pending" | "approved" | "rejected";
+  created_at: string;
+};
+
+export async function ensureBookRequestsTable(): Promise<void> {
+  await sql`
+    create table if not exists book_requests (
+      id serial primary key,
+      title text not null,
+      requested_by text not null,
+      category text not null default 'General',
+      notes text,
+      status text not null default 'pending' check (status in ('pending', 'approved', 'rejected')),
+      created_at timestamp not null default current_timestamp
+    );
+  `;
+}
+
 export async function listBooks(): Promise<BookListRow[]> {
   const hasCategory = await hasColumn("books", "category");
 
@@ -158,4 +182,32 @@ export async function listLoanRecords(): Promise<LoanRecordRow[]> {
   `;
 
   return rows;
+}
+
+export async function listBookRequests(): Promise<BookRequestRow[]> {
+  try {
+    const rows = await sql<BookRequestRow[]>`
+      select
+        id,
+        title,
+        requested_by,
+        category,
+        notes,
+        status,
+        created_at
+      from book_requests
+      order by created_at desc
+      limit 10
+    `;
+
+    return rows;
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+
+    if (message.includes('book_requests') && message.includes('does not exist')) {
+      return [];
+    }
+
+    throw error;
+  }
 }

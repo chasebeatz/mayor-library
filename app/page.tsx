@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import AddBookForm from "../components/AddBookForm";
+import BookRequestBoard from "../components/BookRequestBoard";
 import BookSearch from "../components/BookSearch";
 import ExportLoanRecordsButton from "../components/ExportLoanRecordsButton";
 import LibraryClock from "../components/LibraryClock";
@@ -60,6 +61,81 @@ async function SummaryStats() {
           <span className="font-semibold">Overdue alert:</span> {overdue} book{overdue > 1 ? "s" : ""} need attention and follow-up.
         </div>
       )}
+    </div>
+  );
+}
+
+async function OperationsOverview() {
+  const [books, members] = await Promise.all([listBooks(), listMembers()]);
+
+  const overdueBooks = books.filter((book) => {
+    if (!book.member_name || !book.due_on) return false;
+    return new Date(book.due_on).getTime() < Date.now();
+  });
+
+  const memberActivity = [...members]
+    .map((member) => {
+      const activeBorrowings = books.filter((book) => book.member_name === member.name).length;
+      return {
+        name: member.name,
+        activeBorrowings,
+      };
+    })
+    .filter((member) => member.activeBorrowings > 0)
+    .sort((a, b) => b.activeBorrowings - a.activeBorrowings)
+    .slice(0, 4);
+
+  return (
+    <div className="mt-6 grid gap-4 xl:grid-cols-2">
+      <div className="rounded-[28px] border border-rose-200 bg-rose-50 p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-bold text-rose-900">Overdue reminders</h3>
+          <span className="rounded-full bg-white px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-rose-700">
+            {overdueBooks.length}
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {overdueBooks.length === 0 ? (
+            <p className="text-sm text-rose-800">No overdue items right now.</p>
+          ) : (
+            overdueBooks.slice(0, 4).map((book) => (
+              <div key={book.id} className="rounded-2xl border border-rose-200 bg-white/80 p-3">
+                <p className="text-sm font-semibold text-slate-900">{book.title}</p>
+                <p className="mt-1 text-xs text-slate-600">Borrowed by {book.member_name}</p>
+                <p className="mt-1 text-[11px] font-medium text-rose-700">Due {formatDate(book.due_on)}</p>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
+
+      <div className="rounded-[28px] border border-slate-200 bg-white p-4 shadow-sm">
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-bold text-slate-900">Member activity</h3>
+          <span className="rounded-full bg-slate-100 px-2 py-1 text-[10px] font-semibold uppercase tracking-[0.14em] text-slate-600">
+            Top
+          </span>
+        </div>
+
+        <div className="space-y-3">
+          {memberActivity.length === 0 ? (
+            <p className="text-sm text-slate-500">No active borrowers yet.</p>
+          ) : (
+            memberActivity.map((member) => (
+              <div key={member.name} className="flex items-center justify-between rounded-2xl border border-slate-200 bg-slate-50 p-3">
+                <div>
+                  <p className="text-sm font-semibold text-slate-900">{member.name}</p>
+                  <p className="text-[11px] uppercase tracking-[0.12em] text-slate-500">Borrowing</p>
+                </div>
+                <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-sm font-bold text-indigo-700">
+                  {member.activeBorrowings}
+                </span>
+              </div>
+            ))
+          )}
+        </div>
+      </div>
     </div>
   );
 }
@@ -221,6 +297,20 @@ export default function Page() {
           >
             <SummaryStats />
           </Suspense>
+        </div>
+
+        <Suspense
+          fallback={
+            <div className="mt-6 rounded-2xl border border-slate-200 bg-white p-4 text-sm text-slate-500 shadow-sm">
+              Loading operational insights...
+            </div>
+          }
+        >
+          <OperationsOverview />
+        </Suspense>
+
+        <div className="mt-6">
+          <BookRequestBoard />
         </div>
 
         <div className="mt-6">
